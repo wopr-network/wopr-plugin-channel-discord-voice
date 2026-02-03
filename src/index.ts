@@ -46,6 +46,13 @@ import type {
 } from "./types.js";
 import { OpusToPCMConverter, PCMToOpusConverter, VADDetector } from "./audio-converter.js";
 
+// Console format that handles { msg: ... } objects properly
+const consoleFormat = winston.format.printf(({ level, message, msg, error, ...meta }) => {
+  const displayMsg = msg || message || "";
+  const errorInfo = error ? ` - ${error}` : "";
+  return `${level}: ${displayMsg}${errorInfo}`;
+});
+
 const logger = winston.createLogger({
   level: "debug",
   format: winston.format.combine(
@@ -64,7 +71,7 @@ const logger = winston.createLogger({
       level: "debug",
     }),
     new winston.transports.Console({
-      format: winston.format.combine(winston.format.colorize(), winston.format.simple()),
+      format: winston.format.combine(winston.format.colorize(), consoleFormat),
       level: "warn",
     }),
   ],
@@ -726,7 +733,7 @@ const plugin: WOPRPlugin = {
       await client.login(config.token);
       logger.info("Discord voice bot started");
     } catch (e) {
-      logger.error(e);
+      logger.error({ msg: "Discord voice login failed", error: String(e) });
       throw e;
     }
   },
