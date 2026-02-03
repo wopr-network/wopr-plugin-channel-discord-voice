@@ -47,10 +47,18 @@ import type {
 import { OpusToPCMConverter, PCMToOpusConverter, VADDetector } from "./audio-converter.js";
 
 // Console format that handles { msg: ... } objects properly
-const consoleFormat = winston.format.printf(({ level, message, msg, error, ...meta }) => {
-  const displayMsg = msg || message || "";
-  const errorInfo = error ? ` - ${error}` : "";
-  return `${level}: ${displayMsg}${errorInfo}`;
+const consoleFormat = winston.format.printf((info) => {
+  const level = info.level;
+  // Winston puts the logged object into info.message when you call logger.warn({...})
+  const msgObj = typeof info.message === "object" ? (info.message as Record<string, unknown>) : null;
+  const msg = (msgObj?.msg as string) || (info as any).msg || (typeof info.message === "string" ? info.message : "");
+  const error = (msgObj?.error as string) || (info as any).error;
+  const errorStr = error ? ` - ${error}` : "";
+  // If msg is empty but we have data, stringify the message object
+  if (!msg && msgObj) {
+    return `${level}: ${JSON.stringify(msgObj)}`;
+  }
+  return `${level}: ${msg}${errorStr}`;
 });
 
 const logger = winston.createLogger({
@@ -722,7 +730,7 @@ const plugin: WOPRPlugin = {
 
     // Handle client ready
     client.on(Events.ClientReady, async () => {
-      logger.info({ tag: client?.user?.tag });
+      logger.info({ msg: "Discord voice bot ready", tag: client?.user?.tag });
 
       // Register slash commands
       await registerSlashCommands(config.token!, config.clientId!, config.guildId);
