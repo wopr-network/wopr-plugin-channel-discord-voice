@@ -219,6 +219,15 @@ const configSchema: ConfigSchema = {
       default: 500,
       description: "Minimum amplitude to detect speech",
     },
+    {
+      name: "daveEnabled",
+      type: "boolean",
+      label: "DAVE Encryption",
+      default: true,
+      description:
+        "Enable Discord Audio Video Encryption (DAVE) for end-to-end encrypted voice. " +
+        "Required by Discord after March 1, 2026. Disable only for debugging.",
+    },
   ],
 };
 
@@ -249,7 +258,10 @@ async function joinChannel(
     return existingConnection;
   }
 
-  logger.info({ msg: "Joining voice channel", guildId, channelId });
+  const config = ctx?.getConfig<any>() || {};
+  const daveEnabled = config.daveEnabled !== false; // default true
+
+  logger.info({ msg: "Joining voice channel", guildId, channelId, daveEncryption: daveEnabled });
 
   const connection = joinVoiceChannel({
     channelId,
@@ -257,8 +269,7 @@ async function joinChannel(
     adapterCreator: voiceAdapterCreator,
     selfDeaf: false,
     selfMute: false,
-    // Disable DAVE E2E encryption - use legacy encryption for receiving audio
-    daveEncryption: false,
+    daveEncryption: daveEnabled,
     debug: true,
   });
 
@@ -649,11 +660,14 @@ async function handleSlashCommand(interaction: ChatInputCommandInteraction): Pro
     case "voice-status": {
       const connection = connections.get(guildId);
       const hasVoice = ctx.hasVoice();
+      const statusConfig = ctx.getConfig<any>() || {};
+      const daveActive = statusConfig.daveEnabled !== false;
 
       await interaction.reply({
         content:
           `🎤 **Voice Status**\n\n` +
           `**Connected:** ${connection ? "✅" : "❌"}\n` +
+          `**DAVE Encryption:** ${daveActive ? "✅ Enabled" : "⚠️ Disabled"}\n` +
           `**STT Available:** ${hasVoice.stt ? "✅" : "❌"}\n` +
           `**TTS Available:** ${hasVoice.tts ? "✅" : "❌"}\n` +
           `**Active Sessions:** ${voiceStates.size}`,
@@ -733,7 +747,7 @@ const plugin: WOPRPlugin = {
     }
 
     // Get configuration
-    let config = ctx.getConfig<{ token?: string; guildId?: string; clientId?: string }>();
+    let config = ctx.getConfig<{ token?: string; guildId?: string; clientId?: string; daveEnabled?: boolean }>();
     if (!config?.token || !config?.clientId) {
       // Fall back to main discord config
       const legacy = ctx.getMainConfig("discord") as { token?: string; clientId?: string; guildId?: string };
@@ -775,6 +789,16 @@ const plugin: WOPRPlugin = {
       // Register slash commands
       await registerSlashCommands(config.token!, config.clientId!, config.guildId);
     });
+
+    // Log DAVE encryption status
+    const daveEnabled = config.daveEnabled !== false;
+    if (daveEnabled) {
+      logger.info("DAVE end-to-end encryption enabled (required by Discord after March 1, 2026)");
+    } else {
+      logger.warn(
+        "DAVE end-to-end encryption DISABLED - voice connections will fail after March 1, 2026"
+      );
+    }
 
     // Login to Discord
     try {
