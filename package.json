@@ -29,7 +29,7 @@
   ],
   "license": "MIT",
   "main": "dist/index.js",
-  "name": "wopr-plugin-channel-discord-voice",
+  "name": "@wopr-network/wopr-plugin-channel-discord-voice",
   "scripts": {
     "build": "tsc",
     "check": "biome check src/ && tsc --noEmit",
@@ -42,5 +42,11 @@
   },
   "type": "module",
   "types": "dist/index.d.ts",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist"
+  ]
 }
