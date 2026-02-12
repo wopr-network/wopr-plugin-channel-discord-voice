@@ -38,9 +38,8 @@ import { Readable, pipeline } from "stream";
 import prism from "prism-media";
 import type {
   WOPRPlugin,
-  WOPRPluginContextWithVoice,
+  WOPRPluginContext,
   ConfigSchema,
-  StreamMessage,
   VoiceChannelState,
   AudioBufferState,
 } from "./types.js";
@@ -126,7 +125,7 @@ const logger = winston.createLogger({
 });
 
 let client: Client | null = null;
-let ctx: WOPRPluginContextWithVoice | null = null;
+let ctx: WOPRPluginContext | null = null;
 
 /**
  * Resample mono PCM to stereo at target sample rate using linear interpolation
@@ -479,8 +478,8 @@ async function transcribeUserSpeech(guildId: string, userId: string): Promise<vo
 
   logger.info({ msg: "Transcribing audio", guildId, userId, size: audioPCM.length, durationSeconds: duration });
 
-  // Get STT provider
-  const stt = ctx.getSTT();
+  // Get STT provider (typed as unknown in plugin-types; cast to any for method access)
+  const stt = ctx.getSTT() as any;
   logger.debug({ msg: "STT provider lookup", hasSTT: !!stt });
   if (!stt) {
     logger.warn({ msg: "No STT provider available", guildId });
@@ -545,8 +544,8 @@ async function playTTSResponse(guildId: string, text: string): Promise<void> {
     return;
   }
 
-  // Get TTS provider
-  const tts = ctx.getTTS();
+  // Get TTS provider (typed as unknown in plugin-types; cast to any for method access)
+  const tts = ctx.getTTS() as any;
   logger.debug({ msg: "TTS provider lookup", hasTTS: !!tts });
   if (!tts) {
     logger.warn({ msg: "No TTS provider available", guildId });
@@ -733,7 +732,7 @@ const plugin: WOPRPlugin = {
   description: "Discord voice channel integration with STT/TTS support",
 
   async init(context) {
-    ctx = context as WOPRPluginContextWithVoice;
+    ctx = context;
     ctx.registerConfigSchema("wopr-plugin-channel-discord-voice", configSchema);
 
     // Check voice capabilities
