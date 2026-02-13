@@ -12,7 +12,7 @@
   },
   "description": "Discord voice channel integration for WOPR - Enables voice conversations in Discord",
   "devDependencies": {
-    "@biomejs/biome": "^2.3.14",
+    "@biomejs/biome": "^2.3.15",
     "@types/node": "^20.0.0",
     "typescript": "^5.3.0",
     "vitest": "^4.0.18"
