@@ -7,35 +7,35 @@
 
 // Re-export shared types used by this plugin
 export type {
-  ConfigField,
-  ConfigSchema,
-  StreamMessage,
-  PluginInjectOptions,
-  PluginLogger,
-  AgentIdentity,
-  UserProfile,
-  WOPRPluginContext,
-  WOPRPlugin,
-  ChannelRef,
+	AgentIdentity,
+	ChannelRef,
+	ConfigField,
+	ConfigSchema,
+	PluginInjectOptions,
+	PluginLogger,
+	StreamMessage,
+	UserProfile,
+	WOPRPlugin,
+	WOPRPluginContext,
 } from "@wopr-network/plugin-types";
 
 // Plugin-specific types
 
 /** Voice channel connection state */
 export interface VoiceChannelState {
-  guildId: string;
-  channelId: string;
-  sessionKey: string;
-  userId: string;
-  username: string;
-  isListening: boolean;
-  isSpeaking: boolean;
+	guildId: string;
+	channelId: string;
+	sessionKey: string;
+	userId: string;
+	username: string;
+	isListening: boolean;
+	isSpeaking: boolean;
 }
 
 /** Audio buffer accumulation state for STT */
 export interface AudioBufferState {
-  chunks: Buffer[];
-  startTime: number;
-  lastChunkTime: number;
-  silenceCount: number;
+	chunks: Buffer[];
+	startTime: number;
+	lastChunkTime: number;
+	silenceCount: number;
 }
