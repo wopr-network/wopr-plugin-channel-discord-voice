@@ -26,7 +26,6 @@ import {
 	Events,
 	GatewayIntentBits,
 	Message,
-	MessageFlags,
 	REST,
 	Routes,
 	SlashCommandBuilder,
@@ -752,7 +751,7 @@ async function handleSlashCommand(
 	if (!guildId) {
 		await interaction.reply({
 			content: "This command only works in servers.",
-			flags: MessageFlags.Ephemeral,
+			ephemeral: true,
 		});
 		return;
 	}
@@ -767,7 +766,7 @@ async function handleSlashCommand(
 			if (!voiceChannel) {
 				await interaction.reply({
 					content: "❌ You need to be in a voice channel first!",
-					flags: MessageFlags.Ephemeral,
+					ephemeral: true,
 				});
 				return;
 			}
@@ -776,7 +775,7 @@ async function handleSlashCommand(
 			if (!guild) {
 				await interaction.reply({
 					content: "❌ Guild not found",
-					flags: MessageFlags.Ephemeral,
+					ephemeral: true,
 				});
 				return;
 			}
@@ -798,7 +797,7 @@ async function handleSlashCommand(
 							"⚠️ Warning: Voice features limited\n" +
 							`STT: ${hasVoice.stt ? "✅" : "❌"}\n` +
 							`TTS: ${hasVoice.tts ? "✅" : "❌"}`,
-						flags: MessageFlags.Ephemeral,
+						ephemeral: true,
 					});
 				}
 			} catch (error) {
@@ -833,7 +832,7 @@ async function handleSlashCommand(
 					`**STT Available:** ${hasVoice.stt ? "✅" : "❌"}\n` +
 					`**TTS Available:** ${hasVoice.tts ? "✅" : "❌"}\n` +
 					`**Active Sessions:** ${voiceStates.size}`,
-				flags: MessageFlags.Ephemeral,
+				ephemeral: true,
 			});
 			break;
 		}
