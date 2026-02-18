@@ -569,8 +569,8 @@ async function transcribeUserSpeech(
 		durationSeconds: duration,
 	});
 
-	// Get STT provider (typed as unknown in plugin-types; cast to any for method access)
-	const stt = ctx.getSTT() as any;
+	// Get STT provider via generic extension API (typed as unknown; cast to any for method access)
+	const stt = ctx.getExtension("stt") as any;
 	logger.debug({ msg: "STT provider lookup", hasSTT: !!stt });
 	if (!stt) {
 		logger.warn({ msg: "No STT provider available", guildId });
@@ -661,8 +661,8 @@ async function playTTSResponse(guildId: string, text: string): Promise<void> {
 		return;
 	}
 
-	// Get TTS provider (typed as unknown in plugin-types; cast to any for method access)
-	const tts = ctx.getTTS() as any;
+	// Get TTS provider via generic extension API (typed as unknown; cast to any for method access)
+	const tts = ctx.getExtension("tts") as any;
 	logger.debug({ msg: "TTS provider lookup", hasTTS: !!tts });
 	if (!tts) {
 		logger.warn({ msg: "No TTS provider available", guildId });
@@ -789,8 +789,11 @@ async function handleSlashCommand(
 					content: `🎤 Joined ${voiceChannel.name}!`,
 				});
 
-				// Check voice capabilities
-				const hasVoice = ctx.hasVoice();
+				// Check voice capabilities via generic extension API
+				const hasVoice = {
+					stt: !!ctx.getExtension("stt"),
+					tts: !!ctx.getExtension("tts"),
+				};
 				if (!hasVoice.stt || !hasVoice.tts) {
 					await interaction.followUp({
 						content:
@@ -820,7 +823,10 @@ async function handleSlashCommand(
 
 		case "voice-status": {
 			const connection = connections.get(guildId);
-			const hasVoice = ctx.hasVoice();
+			const hasVoice = {
+				stt: !!ctx.getExtension("stt"),
+				tts: !!ctx.getExtension("tts"),
+			};
 			const statusConfig = ctx.getConfig<any>() || {};
 			const daveActive = statusConfig.daveEnabled !== false;
 
@@ -922,8 +928,11 @@ const plugin: WOPRPlugin = {
 		ctx = context;
 		ctx.registerConfigSchema("wopr-plugin-channel-discord-voice", configSchema);
 
-		// Check voice capabilities
-		const hasVoice = ctx.hasVoice();
+		// Check voice capabilities via generic extension API
+		const hasVoice = {
+			stt: !!ctx.getExtension("stt"),
+			tts: !!ctx.getExtension("tts"),
+		};
 		if (!hasVoice.stt || !hasVoice.tts) {
 			logger.warn({
 				msg: "Voice features limited",
