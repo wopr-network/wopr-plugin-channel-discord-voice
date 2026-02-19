@@ -57,5 +57,8 @@
   "overrides": {
     "tar": "^7.5.7",
     "undici": "^6.23.0"
+  },
+  "release": {
+    "extends": "@wopr-network/semantic-release-config"
   }
 }
