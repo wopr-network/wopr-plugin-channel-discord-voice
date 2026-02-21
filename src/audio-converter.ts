@@ -48,6 +48,11 @@ export class OpusToPCMConverter extends Transform {
 		callback();
 	}
 
+	_destroy(err: Error | null, callback: (error: Error | null) => void) {
+		this.decoder.destroy();
+		callback(err);
+	}
+
 	/**
 	 * Downsample 48kHz stereo PCM to 16kHz mono
 	 * Input: 48kHz, 2 channels, s16le
@@ -117,6 +122,11 @@ export class PCMToOpusConverter extends Transform {
 	_flush(callback: Function) {
 		this.encoder.end();
 		callback();
+	}
+
+	_destroy(err: Error | null, callback: (error: Error | null) => void) {
+		this.encoder.destroy();
+		callback(err);
 	}
 
 	/**
