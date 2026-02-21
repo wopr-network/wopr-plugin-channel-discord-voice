@@ -222,8 +222,13 @@ describe("OpusToPCMConverter", () => {
     const errors: Error[] = [];
     converter.on("error", (err) => errors.push(err));
 
-    // Verify error listener is wired
-    expect(converter.listenerCount("error")).toBeGreaterThan(0);
+    // Emit an error on the internal decoder to exercise the forwarding path
+    const testError = new Error("decoder failure");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (converter as any).decoder.emit("error", testError);
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toBe(testError);
   });
 
   it("should handle flush correctly", async () => {

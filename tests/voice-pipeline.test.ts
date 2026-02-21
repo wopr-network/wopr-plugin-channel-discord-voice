@@ -267,9 +267,7 @@ describe("Voice Pipeline Integration", () => {
       expect(ctx.getExtension).toHaveBeenCalledWith("tts");
     });
 
-    it("should propagate login errors to callers", async () => {
-      // Since the Client instance is internal, we test this by verifying
-      // that login errors bubble up via the init rejection
+    it("should complete init without error when token and clientId are provided", async () => {
       const ctx = createMockContext({
         getConfig: vi.fn(() => ({
           token: "bad-token",
@@ -277,10 +275,6 @@ describe("Voice Pipeline Integration", () => {
         })),
       });
 
-      // The mock Client.login is vi.fn().mockResolvedValue("ok") by default.
-      // We can't easily override it from outside, but we can verify the error
-      // propagation path exists in the code (login failure -> throw).
-      // This test verifies the happy path completes without error.
       await expect(plugin.init(ctx)).resolves.not.toThrow();
     });
   });
