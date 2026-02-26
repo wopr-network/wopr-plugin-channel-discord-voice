@@ -569,8 +569,8 @@ async function transcribeUserSpeech(
 		durationSeconds: duration,
 	});
 
-	// Get STT provider via generic extension API (typed as unknown; cast to any for method access)
-	const stt = ctx.getExtension("stt") as any;
+	// Get STT provider via CapabilityRegistry API
+	const stt = ctx.getCapabilityProviders("stt")[0] as any;
 	logger.debug({ msg: "STT provider lookup", hasSTT: !!stt });
 	if (!stt) {
 		logger.warn({ msg: "No STT provider available", guildId });
@@ -661,8 +661,8 @@ async function playTTSResponse(guildId: string, text: string): Promise<void> {
 		return;
 	}
 
-	// Get TTS provider via generic extension API (typed as unknown; cast to any for method access)
-	const tts = ctx.getExtension("tts") as any;
+	// Get TTS provider via CapabilityRegistry API
+	const tts = ctx.getCapabilityProviders("tts")[0] as any;
 	logger.debug({ msg: "TTS provider lookup", hasTTS: !!tts });
 	if (!tts) {
 		logger.warn({ msg: "No TTS provider available", guildId });
@@ -789,17 +789,15 @@ async function handleSlashCommand(
 					content: `🎤 Joined ${voiceChannel.name}!`,
 				});
 
-				// Check voice capabilities via generic extension API
-				const hasVoice = {
-					stt: !!ctx.getExtension("stt"),
-					tts: !!ctx.getExtension("tts"),
-				};
-				if (!hasVoice.stt || !hasVoice.tts) {
+				// Check voice capabilities via CapabilityRegistry API
+				const hasStt = ctx.hasCapability("stt");
+				const hasTts = ctx.hasCapability("tts");
+				if (!hasStt || !hasTts) {
 					await interaction.followUp({
 						content:
 							"⚠️ Warning: Voice features limited\n" +
-							`STT: ${hasVoice.stt ? "✅" : "❌"}\n` +
-							`TTS: ${hasVoice.tts ? "✅" : "❌"}`,
+							`STT: ${hasStt ? "✅" : "❌"}\n` +
+							`TTS: ${hasTts ? "✅" : "❌"}`,
 						ephemeral: true,
 					});
 				}
@@ -823,10 +821,8 @@ async function handleSlashCommand(
 
 		case "voice-status": {
 			const connection = connections.get(guildId);
-			const hasVoice = {
-				stt: !!ctx.getExtension("stt"),
-				tts: !!ctx.getExtension("tts"),
-			};
+			const hasStt = ctx.hasCapability("stt");
+			const hasTts = ctx.hasCapability("tts");
 			const statusConfig = ctx.getConfig<any>() || {};
 			const daveActive = statusConfig.daveEnabled !== false;
 
@@ -835,8 +831,8 @@ async function handleSlashCommand(
 					`🎤 **Voice Status**\n\n` +
 					`**Connected:** ${connection ? "✅" : "❌"}\n` +
 					`**DAVE Encryption:** ${daveActive ? "✅ Enabled" : "⚠️ Disabled"}\n` +
-					`**STT Available:** ${hasVoice.stt ? "✅" : "❌"}\n` +
-					`**TTS Available:** ${hasVoice.tts ? "✅" : "❌"}\n` +
+					`**STT Available:** ${hasStt ? "✅" : "❌"}\n` +
+					`**TTS Available:** ${hasTts ? "✅" : "❌"}\n` +
 					`**Active Sessions:** ${voiceStates.size}`,
 				ephemeral: true,
 			});
@@ -928,16 +924,14 @@ const plugin: WOPRPlugin = {
 		ctx = context;
 		ctx.registerConfigSchema("wopr-plugin-channel-discord-voice", configSchema);
 
-		// Check voice capabilities via generic extension API
-		const hasVoice = {
-			stt: !!ctx.getExtension("stt"),
-			tts: !!ctx.getExtension("tts"),
-		};
-		if (!hasVoice.stt || !hasVoice.tts) {
+		// Check voice capabilities via CapabilityRegistry API
+		const hasStt = ctx.hasCapability("stt");
+		const hasTts = ctx.hasCapability("tts");
+		if (!hasStt || !hasTts) {
 			logger.warn({
 				msg: "Voice features limited",
-				stt: hasVoice.stt,
-				tts: hasVoice.tts,
+				stt: hasStt,
+				tts: hasTts,
 			});
 		}
 
