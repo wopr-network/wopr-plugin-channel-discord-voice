@@ -141,9 +141,8 @@ function createMockContext(overrides: Record<string, unknown> = {}) {
       vadSilenceMs: 1500,
     })),
     getMainConfig: vi.fn(() => null),
-    hasVoice: vi.fn(() => ({ stt: true, tts: true })),
-    getSTT: vi.fn(() => mockSTT),
-    getTTS: vi.fn(() => mockTTS),
+    hasCapability: vi.fn((cap: string) => cap === "stt" || cap === "tts"),
+    getCapabilityProviders: vi.fn((cap: string) => cap === "stt" ? [mockSTT] : cap === "tts" ? [mockTTS] : []),
     inject: vi.fn(),
     logMessage: vi.fn(),
     log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
@@ -186,14 +185,14 @@ describe("Voice Pipeline Integration", () => {
       const ctx = createMockContext();
       await plugin.init(ctx);
 
-      expect(ctx.hasVoice).toHaveBeenCalled();
+      expect(ctx.hasCapability).toHaveBeenCalledWith("stt");
+      expect(ctx.hasCapability).toHaveBeenCalledWith("tts");
     });
 
     it("should not crash when STT/TTS providers are absent", async () => {
       const ctx = createMockContext({
-        hasVoice: vi.fn(() => ({ stt: false, tts: false })),
-        getSTT: vi.fn(() => undefined),
-        getTTS: vi.fn(() => undefined),
+        hasCapability: vi.fn(() => false),
+        getCapabilityProviders: vi.fn(() => []),
       });
 
       await plugin.init(ctx);
@@ -323,22 +322,20 @@ describe("Voice Pipeline Integration", () => {
   describe("error paths", () => {
     it("should handle missing STT provider gracefully", async () => {
       const ctx = createMockContext({
-        hasVoice: vi.fn(() => ({ stt: false, tts: true })),
-        getSTT: vi.fn(() => undefined),
-        getTTS: vi.fn(() => ({ synthesize: vi.fn() })),
+        hasCapability: vi.fn((cap: string) => cap === "tts"),
+        getCapabilityProviders: vi.fn((cap: string) => cap === "tts" ? [{ synthesize: vi.fn() }] : []),
       });
       await plugin.init(ctx);
-      expect(ctx.hasVoice).toHaveBeenCalled();
+      expect(ctx.hasCapability).toHaveBeenCalledWith("stt");
     });
 
     it("should handle missing TTS provider gracefully", async () => {
       const ctx = createMockContext({
-        hasVoice: vi.fn(() => ({ stt: true, tts: false })),
-        getSTT: vi.fn(() => ({ transcribe: vi.fn() })),
-        getTTS: vi.fn(() => undefined),
+        hasCapability: vi.fn((cap: string) => cap === "stt"),
+        getCapabilityProviders: vi.fn((cap: string) => cap === "stt" ? [{ transcribe: vi.fn() }] : []),
       });
       await plugin.init(ctx);
-      expect(ctx.hasVoice).toHaveBeenCalled();
+      expect(ctx.hasCapability).toHaveBeenCalledWith("tts");
     });
 
     it("should complete init without error when token and clientId are provided", async () => {

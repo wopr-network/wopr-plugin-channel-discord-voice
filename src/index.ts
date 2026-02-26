@@ -570,7 +570,9 @@ async function transcribeUserSpeech(
 	});
 
 	// Get STT provider via CapabilityRegistry API
-	const stt = ctx.getExtension<STTExtension>("stt");
+	const stt = ctx.getCapabilityProviders("stt")[0] as unknown as
+		| STTExtension
+		| undefined;
 	logger.debug({ msg: "STT provider lookup", hasSTT: !!stt });
 	if (!stt) {
 		logger.warn({ msg: "No STT provider available", guildId });
@@ -662,7 +664,9 @@ async function playTTSResponse(guildId: string, text: string): Promise<void> {
 	}
 
 	// Get TTS provider via CapabilityRegistry API
-	const tts = ctx.getExtension<TTSExtension>("tts");
+	const tts = ctx.getCapabilityProviders("tts")[0] as unknown as
+		| TTSExtension
+		| undefined;
 	logger.debug({ msg: "TTS provider lookup", hasTTS: !!tts });
 	if (!tts) {
 		logger.warn({ msg: "No TTS provider available", guildId });
