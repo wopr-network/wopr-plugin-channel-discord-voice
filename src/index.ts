@@ -3,6 +3,8 @@
  *
  * Enables voice conversations in Discord voice channels:
  * - Join/leave voice channels
+ *
+ * Note: @wopr-network/plugin-types is pinned to ^0.5.0.
  * - Play TTS responses to voice channel
  * - Listen to users speaking and transcribe via STT
  * - Audio format conversion (Opus 48kHz stereo <-> PCM 16kHz mono)
@@ -25,26 +27,22 @@ import {
 	Client,
 	Events,
 	GatewayIntentBits,
-	Message,
 	REST,
 	Routes,
 	SlashCommandBuilder,
-	TextChannel,
-	VoiceState,
 } from "discord.js";
 import path from "path";
 import prism from "prism-media";
 import { pipeline, Readable } from "stream";
 import winston from "winston";
-import {
-	OpusToPCMConverter,
-	PCMToOpusConverter,
-	VADDetector,
-} from "./audio-converter.js";
+import { OpusToPCMConverter, VADDetector } from "./audio-converter.js";
 import type {
 	AudioBufferState,
 	ConfigSchema,
+	STTExtension,
+	TTSExtension,
 	VoiceChannelState,
+	VoicePluginConfig,
 	WOPRPlugin,
 	WOPRPluginContext,
 } from "./types.js";
@@ -144,6 +142,7 @@ const logger = winston.createLogger({
 
 let client: Client | null = null;
 let ctx: WOPRPluginContext | null = null;
+const cleanups: Array<() => void> = [];
 
 /**
  * Resample mono PCM to stereo at target sample rate using linear interpolation
@@ -152,7 +151,7 @@ let ctx: WOPRPluginContext | null = null;
  * @param outputRate Output sample rate (e.g., 48000)
  * @returns Output PCM buffer (stereo, s16le)
  */
-function resamplePCM(
+export function resamplePCM(
 	input: Buffer,
 	inputRate: number,
 	outputRate: number,
@@ -210,6 +209,7 @@ const configSchema: ConfigSchema = {
 			placeholder: "Bot token from Discord Developer Portal",
 			required: true,
 			description: "Your Discord bot token",
+			secret: true,
 		},
 		{
 			name: "guildId",
@@ -271,7 +271,7 @@ const commands = [
 async function joinChannel(
 	guildId: string,
 	channelId: string,
-	voiceAdapterCreator: any,
+	voiceAdapterCreator: Parameters<typeof joinVoiceChannel>[0]["adapterCreator"],
 ): Promise<VoiceConnection> {
 	const existingConnection = connections.get(guildId);
 	if (existingConnection) {
@@ -279,7 +279,7 @@ async function joinChannel(
 		return existingConnection;
 	}
 
-	const config = ctx?.getConfig<any>() || {};
+	const config = ctx?.getConfig<VoicePluginConfig>() || {};
 	const daveEnabled = config.daveEnabled !== false; // default true
 
 	logger.info({
@@ -303,7 +303,7 @@ async function joinChannel(
 	try {
 		await entersState(connection, VoiceConnectionStatus.Ready, 30_000);
 		logger.info({ msg: "Voice connection ready", guildId });
-	} catch (error) {
+	} catch (error: unknown) {
 		logger.error({
 			msg: "Failed to connect to voice channel",
 			error: String(error),
@@ -445,7 +445,7 @@ function startListening(guildId: string, connection: VoiceConnection): void {
 		});
 
 		// VAD for speech detection
-		const config = ctx?.getConfig<any>() || {};
+		const config = ctx?.getConfig<VoicePluginConfig>() || {};
 		logger.debug({
 			msg: "Creating VAD",
 			userId,
@@ -570,7 +570,9 @@ async function transcribeUserSpeech(
 	});
 
 	// Get STT provider via CapabilityRegistry API
-	const stt = ctx.getCapabilityProviders("stt")[0] as any;
+	const stt = ctx.getCapabilityProviders("stt")[0] as unknown as
+		| STTExtension
+		| undefined;
 	logger.debug({ msg: "STT provider lookup", hasSTT: !!stt });
 	if (!stt) {
 		logger.warn({ msg: "No STT provider available", guildId });
@@ -630,11 +632,11 @@ async function transcribeUserSpeech(
 		logger.debug({ msg: "Calling playTTSResponse", guildId });
 		await playTTSResponse(guildId, response);
 		logger.debug({ msg: "playTTSResponse completed", guildId });
-	} catch (error) {
+	} catch (error: unknown) {
 		logger.error({
 			msg: "Transcription/response failed",
 			error: String(error),
-			stack: (error as any)?.stack,
+			stack: error instanceof Error ? error.stack : undefined,
 		});
 	}
 }
@@ -662,7 +664,9 @@ async function playTTSResponse(guildId: string, text: string): Promise<void> {
 	}
 
 	// Get TTS provider via CapabilityRegistry API
-	const tts = ctx.getCapabilityProviders("tts")[0] as any;
+	const tts = ctx.getCapabilityProviders("tts")[0] as unknown as
+		| TTSExtension
+		| undefined;
 	logger.debug({ msg: "TTS provider lookup", hasTTS: !!tts });
 	if (!tts) {
 		logger.warn({ msg: "No TTS provider available", guildId });
@@ -729,11 +733,11 @@ async function playTTSResponse(guildId: string, text: string): Promise<void> {
 		player.play(resource);
 
 		logger.info({ msg: "Playing TTS audio", guildId });
-	} catch (error) {
+	} catch (error: unknown) {
 		logger.error({
 			msg: "TTS playback failed",
 			error: String(error),
-			stack: (error as any)?.stack,
+			stack: error instanceof Error ? error.stack : undefined,
 		});
 	}
 }
@@ -760,7 +764,9 @@ async function handleSlashCommand(
 
 	switch (commandName) {
 		case "voice-join": {
-			const member = interaction.member as any;
+			const member = interaction.member as {
+				voice?: { channel?: { id: string; name: string } };
+			} | null;
 			const voiceChannel = member?.voice?.channel;
 
 			if (!voiceChannel) {
@@ -823,7 +829,7 @@ async function handleSlashCommand(
 			const connection = connections.get(guildId);
 			const hasStt = ctx.hasCapability("stt");
 			const hasTts = ctx.hasCapability("tts");
-			const statusConfig = ctx.getConfig<any>() || {};
+			const statusConfig = ctx.getConfig<VoicePluginConfig>() || {};
 			const daveActive = statusConfig.daveEnabled !== false;
 
 			await interaction.reply({
@@ -861,11 +867,11 @@ async function registerSlashCommands(
 			// Fetch existing guild commands
 			const existingCommands = (await rest.get(
 				Routes.applicationGuildCommands(clientId, guildId),
-			)) as any[];
+			)) as { name: string }[];
 
 			// Filter out our voice commands from existing (in case of re-registration)
 			const otherCommands = existingCommands.filter(
-				(cmd: any) => !voiceCommandNames.has(cmd.name),
+				(cmd) => !voiceCommandNames.has(cmd.name),
 			);
 
 			// Merge: keep other commands + add our voice commands
@@ -884,11 +890,11 @@ async function registerSlashCommands(
 			// Fetch existing global commands
 			const existingCommands = (await rest.get(
 				Routes.applicationCommands(clientId),
-			)) as any[];
+			)) as { name: string }[];
 
 			// Filter out our voice commands from existing
 			const otherCommands = existingCommands.filter(
-				(cmd: any) => !voiceCommandNames.has(cmd.name),
+				(cmd) => !voiceCommandNames.has(cmd.name),
 			);
 
 			// Merge: keep other commands + add our voice commands
@@ -904,7 +910,7 @@ async function registerSlashCommands(
 				`Registered ${commands.length} global voice commands (merged with ${otherCommands.length} existing)`,
 			);
 		}
-	} catch (error) {
+	} catch (error: unknown) {
 		logger.error({
 			msg: "Failed to register voice commands",
 			error: String(error),
@@ -920,9 +926,38 @@ const plugin: WOPRPlugin = {
 	version: "1.0.0",
 	description: "Discord voice channel integration with STT/TTS support",
 
+	manifest: {
+		name: "@wopr-network/wopr-plugin-channel-discord-voice",
+		version: "1.0.0",
+		description: "Discord voice channel integration with STT/TTS support",
+		author: "WOPR",
+		license: "MIT",
+		capabilities: ["voice", "channel"],
+		category: "channel",
+		tags: ["discord", "voice", "stt", "tts", "audio"],
+		icon: "🎤",
+		dependencies: ["@wopr-network/wopr-plugin-discord"],
+		requires: {
+			config: ["token", "clientId"],
+			network: { outbound: true },
+		},
+		lifecycle: {
+			shutdownBehavior: "graceful",
+			shutdownTimeoutMs: 10000,
+		},
+		configSchema: configSchema,
+	},
+
 	async init(context) {
+		// Idempotent: clean up any previous state
+		if (client) {
+			await plugin.shutdown?.();
+		}
 		ctx = context;
 		ctx.registerConfigSchema("wopr-plugin-channel-discord-voice", configSchema);
+		cleanups.push(() =>
+			ctx?.unregisterConfigSchema?.("wopr-plugin-channel-discord-voice"),
+		);
 
 		// Check voice capabilities via CapabilityRegistry API
 		const hasStt = ctx.hasCapability("stt");
@@ -1020,11 +1055,29 @@ const plugin: WOPRPlugin = {
 			leaveChannel(guildId);
 		}
 
+		// Run cleanups in reverse order
+		while (cleanups.length > 0) {
+			const fn = cleanups.pop();
+			try {
+				fn?.();
+			} catch {
+				// best-effort cleanup
+			}
+		}
+
 		// Destroy Discord client
 		if (client) {
 			await client.destroy();
+			client = null;
 			logger.info("Discord voice bot stopped");
 		}
+
+		// Clear module-level state
+		connections.clear();
+		audioPlayers.clear();
+		voiceStates.clear();
+		audioBuffers.clear();
+		ctx = null;
 	},
 };
 

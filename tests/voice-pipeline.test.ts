@@ -119,7 +119,7 @@ vi.mock("discord.js", async () => {
 // Now import the plugin — mocks are in place
 // ---------------------------------------------------------------------------
 
-import plugin from "../src/index.js";
+import plugin, { resamplePCM } from "../src/index.js";
 import * as discordVoice from "@discordjs/voice";
 
 // ---------------------------------------------------------------------------
@@ -132,6 +132,7 @@ function createMockContext(overrides: Record<string, unknown> = {}) {
 
   return {
     registerConfigSchema: vi.fn(),
+    unregisterConfigSchema: vi.fn(),
     getConfig: vi.fn(() => ({
       token: "fake-token",
       clientId: "fake-client-id",
@@ -140,12 +141,8 @@ function createMockContext(overrides: Record<string, unknown> = {}) {
       vadSilenceMs: 1500,
     })),
     getMainConfig: vi.fn(() => null),
-    hasCapability: vi.fn((name: string) => name === "stt" || name === "tts"),
-    getCapabilityProviders: vi.fn((name: string) => {
-      if (name === "stt") return [mockSTT];
-      if (name === "tts") return [mockTTS];
-      return [];
-    }),
+    hasCapability: vi.fn((cap: string) => cap === "stt" || cap === "tts"),
+    getCapabilityProviders: vi.fn((cap: string) => cap === "stt" ? [mockSTT] : cap === "tts" ? [mockTTS] : []),
     inject: vi.fn(),
     logMessage: vi.fn(),
     log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
@@ -250,13 +247,83 @@ describe("Voice Pipeline Integration", () => {
       await plugin.init(ctx);
       await expect(plugin.shutdown()).resolves.not.toThrow();
     });
+
+    it("should set ctx to null after shutdown — re-init works cleanly", async () => {
+      const ctx = createMockContext();
+      await plugin.init(ctx);
+      await plugin.shutdown();
+      // Re-init should work without error (proves ctx was cleaned up)
+      const ctx2 = createMockContext();
+      await plugin.init(ctx2);
+      expect(ctx2.registerConfigSchema).toHaveBeenCalled();
+      await plugin.shutdown();
+    });
+
+    it("should be idempotent — calling shutdown twice should not throw", async () => {
+      const ctx = createMockContext();
+      await plugin.init(ctx);
+      await plugin.shutdown();
+      await expect(plugin.shutdown()).resolves.not.toThrow();
+    });
+
+    it("should unregister config schema on shutdown", async () => {
+      const unregisterConfigSchema = vi.fn();
+      const ctx = createMockContext({ unregisterConfigSchema });
+      await plugin.init(ctx);
+      await plugin.shutdown();
+      expect(unregisterConfigSchema).toHaveBeenCalledWith(
+        "wopr-plugin-channel-discord-voice",
+      );
+    });
+  });
+
+  describe("manifest", () => {
+    it("should have a manifest with required fields", () => {
+      expect(plugin.manifest).toBeDefined();
+      expect(plugin.manifest!.name).toBe("@wopr-network/wopr-plugin-channel-discord-voice");
+      expect(plugin.manifest!.capabilities).toContain("voice");
+      expect(plugin.manifest!.category).toBe("channel");
+      expect(plugin.manifest!.tags).toEqual(expect.arrayContaining(["discord", "voice", "stt", "tts"]));
+      expect(plugin.manifest!.icon).toBeDefined();
+      expect(plugin.manifest!.lifecycle).toBeDefined();
+      expect(plugin.manifest!.dependencies).toContain("@wopr-network/wopr-plugin-discord");
+    });
+
+    it("should mark token field as secret in config schema", () => {
+      const tokenField = plugin.manifest!.configSchema!.fields.find(
+        (f) => f.name === "token",
+      );
+      expect(tokenField).toBeDefined();
+      expect(tokenField!.secret).toBe(true);
+    });
+  });
+
+  describe("resamplePCM", () => {
+    it("should convert mono PCM from input rate to output rate as stereo", () => {
+      // 10 samples at 16kHz -> 30 samples at 48kHz (stereo = 30 * 4 bytes)
+      const input = Buffer.alloc(20); // 10 samples * 2 bytes
+      for (let i = 0; i < 10; i++) {
+        input.writeInt16LE(1000 * i, i * 2);
+      }
+      const output = resamplePCM(input, 16000, 48000);
+      // Output should be stereo (4 bytes per sample) at 3x the sample count
+      expect(output.length).toBe(Math.floor(10 * 3) * 4);
+      // First sample (0) — left and right both 0
+      expect(output.readInt16LE(0)).toBe(0);
+      expect(output.readInt16LE(2)).toBe(0);
+    });
+
+    it("should handle empty input", () => {
+      const output = resamplePCM(Buffer.alloc(0), 16000, 48000);
+      expect(output.length).toBe(0);
+    });
   });
 
   describe("error paths", () => {
     it("should handle missing STT provider gracefully", async () => {
       const ctx = createMockContext({
-        hasCapability: vi.fn((name: string) => name === "tts"),
-        getCapabilityProviders: vi.fn((name: string) => (name === "tts" ? [{ synthesize: vi.fn() }] : [])),
+        hasCapability: vi.fn((cap: string) => cap === "tts"),
+        getCapabilityProviders: vi.fn((cap: string) => cap === "tts" ? [{ synthesize: vi.fn() }] : []),
       });
       await plugin.init(ctx);
       expect(ctx.hasCapability).toHaveBeenCalledWith("stt");
@@ -264,8 +331,8 @@ describe("Voice Pipeline Integration", () => {
 
     it("should handle missing TTS provider gracefully", async () => {
       const ctx = createMockContext({
-        hasCapability: vi.fn((name: string) => name === "stt"),
-        getCapabilityProviders: vi.fn((name: string) => (name === "stt" ? [{ transcribe: vi.fn() }] : [])),
+        hasCapability: vi.fn((cap: string) => cap === "stt"),
+        getCapabilityProviders: vi.fn((cap: string) => cap === "stt" ? [{ transcribe: vi.fn() }] : []),
       });
       await plugin.init(ctx);
       expect(ctx.hasCapability).toHaveBeenCalledWith("tts");

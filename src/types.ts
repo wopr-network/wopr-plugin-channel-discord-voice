@@ -19,6 +19,32 @@ export type {
 	WOPRPluginContext,
 } from "@wopr-network/plugin-types";
 
+/** Minimal STT provider interface for capability provider cast */
+export interface STTExtension {
+	transcribe(
+		audio: Buffer,
+		options: { format: string; sampleRate: number; language: string },
+	): Promise<string>;
+}
+
+/** Minimal TTS extension interface for capability provider cast */
+export interface TTSExtension {
+	synthesize(
+		text: string,
+		options: { format: string },
+	): Promise<{ audio: Buffer; sampleRate?: number; format?: string }>;
+}
+
+/** Typed config for this plugin */
+export interface VoicePluginConfig {
+	token?: string;
+	guildId?: string;
+	clientId?: string;
+	daveEnabled?: boolean;
+	vadSilenceMs?: number;
+	vadThreshold?: number;
+}
+
 // Plugin-specific types
 
 /** Voice channel connection state */
