@@ -4,10 +4,7 @@
  * Enables voice conversations in Discord voice channels:
  * - Join/leave voice channels
  *
- * Note: @wopr-network/plugin-types is pinned to ^0.2.1 (the latest published
- * version on npm). ^0.4.0 is not yet published. All APIs used here —
- * hasVoice(), getSTT(), getTTS(), unregisterConfigSchema — are present in
- * 0.2.1. Bump this once 0.4.x is published.
+ * Note: @wopr-network/plugin-types is pinned to ^0.5.0.
  * - Play TTS responses to voice channel
  * - Listen to users speaking and transcribe via STT
  * - Audio format conversion (Opus 48kHz stereo <-> PCM 16kHz mono)
@@ -573,7 +570,7 @@ async function transcribeUserSpeech(
 	});
 
 	// Get STT provider via CapabilityRegistry API
-	const stt = ctx.getSTT() as STTExtension | undefined;
+	const stt = ctx.getExtension<STTExtension>("stt");
 	logger.debug({ msg: "STT provider lookup", hasSTT: !!stt });
 	if (!stt) {
 		logger.warn({ msg: "No STT provider available", guildId });
@@ -665,7 +662,7 @@ async function playTTSResponse(guildId: string, text: string): Promise<void> {
 	}
 
 	// Get TTS provider via CapabilityRegistry API
-	const tts = ctx.getTTS() as TTSExtension | undefined;
+	const tts = ctx.getExtension<TTSExtension>("tts");
 	logger.debug({ msg: "TTS provider lookup", hasTTS: !!tts });
 	if (!tts) {
 		logger.warn({ msg: "No TTS provider available", guildId });
@@ -795,8 +792,8 @@ async function handleSlashCommand(
 				});
 
 				// Check voice capabilities via CapabilityRegistry API
-				const hasStt = ctx.hasVoice().stt;
-				const hasTts = ctx.hasVoice().tts;
+				const hasStt = ctx.hasCapability("stt");
+				const hasTts = ctx.hasCapability("tts");
 				if (!hasStt || !hasTts) {
 					await interaction.followUp({
 						content:
@@ -826,8 +823,8 @@ async function handleSlashCommand(
 
 		case "voice-status": {
 			const connection = connections.get(guildId);
-			const hasStt = ctx.hasVoice().stt;
-			const hasTts = ctx.hasVoice().tts;
+			const hasStt = ctx.hasCapability("stt");
+			const hasTts = ctx.hasCapability("tts");
 			const statusConfig = ctx.getConfig<VoicePluginConfig>() || {};
 			const daveActive = statusConfig.daveEnabled !== false;
 
@@ -959,8 +956,8 @@ const plugin: WOPRPlugin = {
 		);
 
 		// Check voice capabilities via CapabilityRegistry API
-		const hasStt = ctx.hasVoice().stt;
-		const hasTts = ctx.hasVoice().tts;
+		const hasStt = ctx.hasCapability("stt");
+		const hasTts = ctx.hasCapability("tts");
 		if (!hasStt || !hasTts) {
 			logger.warn({
 				msg: "Voice features limited",
