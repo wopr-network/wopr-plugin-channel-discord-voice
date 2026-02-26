@@ -3,6 +3,11 @@
  *
  * Enables voice conversations in Discord voice channels:
  * - Join/leave voice channels
+ *
+ * Note: @wopr-network/plugin-types is pinned to ^0.2.1 (the latest published
+ * version on npm). ^0.4.0 is not yet published. All APIs used here —
+ * hasVoice(), getSTT(), getTTS(), unregisterConfigSchema — are present in
+ * 0.2.1. Bump this once 0.4.x is published.
  * - Play TTS responses to voice channel
  * - Listen to users speaking and transcribe via STT
  * - Audio format conversion (Opus 48kHz stereo <-> PCM 16kHz mono)
