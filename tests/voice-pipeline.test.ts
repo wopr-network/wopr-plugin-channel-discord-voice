@@ -140,10 +140,11 @@ function createMockContext(overrides: Record<string, unknown> = {}) {
       vadSilenceMs: 1500,
     })),
     getMainConfig: vi.fn(() => null),
-    getExtension: vi.fn((name: string) => {
-      if (name === "stt") return mockSTT;
-      if (name === "tts") return mockTTS;
-      return null;
+    hasCapability: vi.fn((name: string) => name === "stt" || name === "tts"),
+    getCapabilityProviders: vi.fn((name: string) => {
+      if (name === "stt") return [mockSTT];
+      if (name === "tts") return [mockTTS];
+      return [];
     }),
     inject: vi.fn(),
     logMessage: vi.fn(),
@@ -183,17 +184,18 @@ describe("Voice Pipeline Integration", () => {
       expect(ctx.registerConfigSchema).toHaveBeenCalled();
     });
 
-    it("should check voice capabilities via getExtension", async () => {
+    it("should check voice capabilities via hasCapability", async () => {
       const ctx = createMockContext();
       await plugin.init(ctx);
 
-      expect(ctx.getExtension).toHaveBeenCalledWith("stt");
-      expect(ctx.getExtension).toHaveBeenCalledWith("tts");
+      expect(ctx.hasCapability).toHaveBeenCalledWith("stt");
+      expect(ctx.hasCapability).toHaveBeenCalledWith("tts");
     });
 
     it("should not crash when STT/TTS providers are absent", async () => {
       const ctx = createMockContext({
-        getExtension: vi.fn(() => null),
+        hasCapability: vi.fn(() => false),
+        getCapabilityProviders: vi.fn(() => []),
       });
 
       await plugin.init(ctx);
@@ -253,18 +255,20 @@ describe("Voice Pipeline Integration", () => {
   describe("error paths", () => {
     it("should handle missing STT provider gracefully", async () => {
       const ctx = createMockContext({
-        getExtension: vi.fn((name: string) => (name === "tts" ? { synthesize: vi.fn() } : null)),
+        hasCapability: vi.fn((name: string) => name === "tts"),
+        getCapabilityProviders: vi.fn((name: string) => (name === "tts" ? [{ synthesize: vi.fn() }] : [])),
       });
       await plugin.init(ctx);
-      expect(ctx.getExtension).toHaveBeenCalledWith("stt");
+      expect(ctx.hasCapability).toHaveBeenCalledWith("stt");
     });
 
     it("should handle missing TTS provider gracefully", async () => {
       const ctx = createMockContext({
-        getExtension: vi.fn((name: string) => (name === "stt" ? { transcribe: vi.fn() } : null)),
+        hasCapability: vi.fn((name: string) => name === "stt"),
+        getCapabilityProviders: vi.fn((name: string) => (name === "stt" ? [{ transcribe: vi.fn() }] : [])),
       });
       await plugin.init(ctx);
-      expect(ctx.getExtension).toHaveBeenCalledWith("tts");
+      expect(ctx.hasCapability).toHaveBeenCalledWith("tts");
     });
 
     it("should complete init without error when token and clientId are provided", async () => {
