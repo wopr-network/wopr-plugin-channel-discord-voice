@@ -4,12 +4,14 @@
  * Enables voice conversations in Discord voice channels:
  * - Join/leave voice channels
  *
- * Note: @wopr-network/plugin-types is pinned to ^0.5.0.
+ * Note: @wopr-network/plugin-types is pinned to ^0.7.1.
  * - Play TTS responses to voice channel
  * - Listen to users speaking and transcribe via STT
  * - Audio format conversion (Opus 48kHz stereo <-> PCM 16kHz mono)
  */
 
+import path from "node:path";
+import { pipeline, Readable } from "node:stream";
 import {
 	type AudioPlayer,
 	AudioPlayerStatus,
@@ -31,9 +33,6 @@ import {
 	Routes,
 	SlashCommandBuilder,
 } from "discord.js";
-import path from "path";
-import prism from "prism-media";
-import { pipeline, Readable } from "stream";
 import winston from "winston";
 import { OpusToPCMConverter, VADDetector } from "./audio-converter.js";
 import type {
@@ -807,7 +806,7 @@ async function handleSlashCommand(
 						ephemeral: true,
 					});
 				}
-			} catch (error) {
+			} catch (error: unknown) {
 				logger.error({
 					msg: "Failed to join voice channel",
 					error: String(error),
@@ -1020,11 +1019,13 @@ const plugin: WOPRPlugin = {
 			logger.info({ msg: "Discord voice bot ready", tag: client?.user?.tag });
 
 			// Register slash commands
-			await registerSlashCommands(
-				config.token!,
-				config.clientId!,
-				config.guildId,
-			);
+			if (config.token && config.clientId) {
+				await registerSlashCommands(
+					config.token,
+					config.clientId,
+					config.guildId,
+				);
+			}
 		});
 
 		// Log DAVE encryption status
@@ -1043,9 +1044,9 @@ const plugin: WOPRPlugin = {
 		try {
 			await client.login(config.token);
 			logger.info("Discord voice bot started");
-		} catch (e) {
-			logger.error({ msg: "Discord voice login failed", error: String(e) });
-			throw e;
+		} catch (error: unknown) {
+			logger.error({ msg: "Discord voice login failed", error: String(error) });
+			throw error;
 		}
 	},
 
