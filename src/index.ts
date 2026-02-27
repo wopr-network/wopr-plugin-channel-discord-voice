@@ -4,7 +4,7 @@
  * Enables voice conversations in Discord voice channels:
  * - Join/leave voice channels
  *
- * Note: @wopr-network/plugin-types is pinned to ^0.5.0.
+ * Note: @wopr-network/plugin-types is pinned to ^0.7.1.
  * - Play TTS responses to voice channel
  * - Listen to users speaking and transcribe via STT
  * - Audio format conversion (Opus 48kHz stereo <-> PCM 16kHz mono)

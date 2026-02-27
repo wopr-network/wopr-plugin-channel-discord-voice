@@ -37,12 +37,16 @@ export class OpusToPCMConverter extends Transform {
 		});
 	}
 
-	_transform(chunk: Buffer, _encoding: string, callback: () => void) {
+	_transform(
+		chunk: Buffer,
+		_encoding: string,
+		callback: (error?: Error | null) => void,
+	) {
 		this.decoder.write(chunk);
 		callback();
 	}
 
-	_flush(callback: () => void) {
+	_flush(callback: (error?: Error | null) => void) {
 		this.decoder.end();
 		callback();
 	}
@@ -109,14 +113,18 @@ export class PCMToOpusConverter extends Transform {
 		});
 	}
 
-	_transform(chunk: Buffer, _encoding: string, callback: () => void) {
+	_transform(
+		chunk: Buffer,
+		_encoding: string,
+		callback: (error?: Error | null) => void,
+	) {
 		// Resample to 48kHz stereo
 		const upsampled = this.resampleAndStereo(chunk);
 		this.encoder.write(upsampled);
 		callback();
 	}
 
-	_flush(callback: () => void) {
+	_flush(callback: (error?: Error | null) => void) {
 		this.encoder.end();
 		callback();
 	}
@@ -191,7 +199,11 @@ export class VADDetector extends Transform {
 		this.sampleRate = options.sampleRate ?? 16000;
 	}
 
-	_transform(chunk: Buffer, _encoding: string, callback: () => void) {
+	_transform(
+		chunk: Buffer,
+		_encoding: string,
+		callback: (error?: Error | null) => void,
+	) {
 		const isSilent = this.detectSilence(chunk);
 
 		if (isSilent) {
