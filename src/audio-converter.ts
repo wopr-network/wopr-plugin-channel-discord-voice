@@ -6,15 +6,14 @@
  * - PCM 16kHz mono (from TTS) -> Discord Opus (48kHz stereo)
  */
 
+import { Transform } from "node:stream";
 import prism from "prism-media";
-import { Transform } from "stream";
 
 /**
  * Convert Discord Opus (48kHz stereo) to PCM 16kHz mono for STT
  */
 export class OpusToPCMConverter extends Transform {
 	private decoder: prism.opus.Decoder;
-	private resampler: Transform | null = null;
 
 	constructor() {
 		super();
@@ -38,12 +37,12 @@ export class OpusToPCMConverter extends Transform {
 		});
 	}
 
-	_transform(chunk: Buffer, encoding: string, callback: Function) {
+	_transform(chunk: Buffer, _encoding: string, callback: () => void) {
 		this.decoder.write(chunk);
 		callback();
 	}
 
-	_flush(callback: Function) {
+	_flush(callback: () => void) {
 		this.decoder.end();
 		callback();
 	}
@@ -88,12 +87,10 @@ export class OpusToPCMConverter extends Transform {
  */
 export class PCMToOpusConverter extends Transform {
 	private encoder: prism.opus.Encoder;
-	private inputSampleRate: number;
 	private resampleRatio: number;
 
 	constructor(inputSampleRate: number = 16000) {
 		super();
-		this.inputSampleRate = inputSampleRate;
 		this.resampleRatio = 48000 / inputSampleRate;
 
 		// Encode PCM (48kHz stereo) to Opus
@@ -112,14 +109,14 @@ export class PCMToOpusConverter extends Transform {
 		});
 	}
 
-	_transform(chunk: Buffer, encoding: string, callback: Function) {
+	_transform(chunk: Buffer, _encoding: string, callback: () => void) {
 		// Resample to 48kHz stereo
 		const upsampled = this.resampleAndStereo(chunk);
 		this.encoder.write(upsampled);
 		callback();
 	}
 
-	_flush(callback: Function) {
+	_flush(callback: () => void) {
 		this.encoder.end();
 		callback();
 	}
@@ -194,7 +191,7 @@ export class VADDetector extends Transform {
 		this.sampleRate = options.sampleRate ?? 16000;
 	}
 
-	_transform(chunk: Buffer, encoding: string, callback: Function) {
+	_transform(chunk: Buffer, _encoding: string, callback: () => void) {
 		const isSilent = this.detectSilence(chunk);
 
 		if (isSilent) {

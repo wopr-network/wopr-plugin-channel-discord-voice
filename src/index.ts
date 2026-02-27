@@ -10,6 +10,8 @@
  * - Audio format conversion (Opus 48kHz stereo <-> PCM 16kHz mono)
  */
 
+import path from "node:path";
+import { pipeline, Readable } from "node:stream";
 import {
 	type AudioPlayer,
 	AudioPlayerStatus,
@@ -31,9 +33,6 @@ import {
 	Routes,
 	SlashCommandBuilder,
 } from "discord.js";
-import path from "path";
-import prism from "prism-media";
-import { pipeline, Readable } from "stream";
 import winston from "winston";
 import { OpusToPCMConverter, VADDetector } from "./audio-converter.js";
 import type {
@@ -1020,11 +1019,13 @@ const plugin: WOPRPlugin = {
 			logger.info({ msg: "Discord voice bot ready", tag: client?.user?.tag });
 
 			// Register slash commands
-			await registerSlashCommands(
-				config.token!,
-				config.clientId!,
-				config.guildId,
-			);
+			if (config.token && config.clientId) {
+				await registerSlashCommands(
+					config.token,
+					config.clientId,
+					config.guildId,
+				);
+			}
 		});
 
 		// Log DAVE encryption status
