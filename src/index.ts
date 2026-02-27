@@ -806,7 +806,7 @@ async function handleSlashCommand(
 						ephemeral: true,
 					});
 				}
-			} catch (error) {
+			} catch (error: unknown) {
 				logger.error({
 					msg: "Failed to join voice channel",
 					error: String(error),
@@ -1044,9 +1044,9 @@ const plugin: WOPRPlugin = {
 		try {
 			await client.login(config.token);
 			logger.info("Discord voice bot started");
-		} catch (e) {
-			logger.error({ msg: "Discord voice login failed", error: String(e) });
-			throw e;
+		} catch (error: unknown) {
+			logger.error({ msg: "Discord voice login failed", error: String(error) });
+			throw error;
 		}
 	},
 
