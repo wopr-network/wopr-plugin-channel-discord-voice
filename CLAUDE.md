@@ -33,6 +33,16 @@ src/
 
 Imports only from `@wopr-network/plugin-types`. Never import from `@wopr-network/wopr` core.
 
+## PR Automation
+
+This repo runs three automated bots on every PR:
+
+- **Qodo** (`.pr_agent.toml`): `auto_review` and `auto_describe` are enabled; `auto_improve` is disabled to prevent bot commits from re-triggering CI/Claude workflows in a cascade.
+- **CodeRabbit**: OSS-tier review on every PR.
+- **Claude** (`.github/workflows/claude.yml`): Full code review + auto-fix loop on `pull_request` (opened/synchronize/reopened). Responds to `@claude` comments.
+
+To disable Qodo automation temporarily, set the flags to `false` in `.pr_agent.toml`. To disable CodeRabbit, remove its GitHub App from the repo settings.
+
 ## Issue Tracking
 
 All issues in **Linear** (team: WOPR). Issue descriptions start with `**Repo:** wopr-network/wopr-plugin-channel-discord-voice`.
