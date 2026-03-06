@@ -3,8 +3,6 @@
  *
  * Enables voice conversations in Discord voice channels:
  * - Join/leave voice channels
- *
- * Note: @wopr-network/plugin-types is pinned to ^0.7.1.
  * - Play TTS responses to voice channel
  * - Listen to users speaking and transcribe via STT
  * - Audio format conversion (Opus 48kHz stereo <-> PCM 16kHz mono)
@@ -37,6 +35,8 @@ import winston from "winston";
 import { OpusToPCMConverter, VADDetector } from "./audio-converter.js";
 import type {
 	AudioBufferState,
+	ChannelNotificationCallbacks,
+	ChannelNotificationPayload,
 	ConfigSchema,
 	STTExtension,
 	TTSExtension,
@@ -920,7 +920,13 @@ async function registerSlashCommands(
 /**
  * Plugin implementation
  */
-const plugin: WOPRPlugin = {
+const plugin: WOPRPlugin & {
+	sendNotification?(
+		channelId: string,
+		payload: ChannelNotificationPayload,
+		callbacks?: ChannelNotificationCallbacks,
+	): Promise<void>;
+} = {
 	name: "wopr-plugin-channel-discord-voice",
 	version: "1.0.0",
 	description: "Discord voice channel integration with STT/TTS support",
@@ -1048,6 +1054,16 @@ const plugin: WOPRPlugin = {
 			logger.error({ msg: "Discord voice login failed", error: String(error) });
 			throw error;
 		}
+	},
+
+	// TODO: Implement notification delivery for Discord voice (e.g. TTS the notification
+	// text or send a DM to the relevant user).
+	async sendNotification(
+		_channelId: string,
+		_payload: ChannelNotificationPayload,
+		_callbacks?: ChannelNotificationCallbacks,
+	): Promise<void> {
+		logger.debug({ msg: "sendNotification called but not yet implemented for Discord Voice" });
 	},
 
 	async shutdown() {

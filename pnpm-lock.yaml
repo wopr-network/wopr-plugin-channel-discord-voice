@@ -18,8 +18,8 @@ importers:
         specifier: ^0.1.6
         version: 0.1.10
       '@wopr-network/plugin-types':
-        specifier: ^0.7.1
-        version: 0.7.1(zod@3.25.76)
+        specifier: ^0.9.0
+        version: 0.9.0(zod@3.25.76)
       discord.js:
         specifier: ^14.25.1
         version: 14.25.1
@@ -603,8 +603,8 @@ packages:
     resolution: {integrity: sha512-Xfe6rpCTxSxfbswi/W/Pz7zp1WWSNn4A0eW4mLkQUewCrXXtMj31lCg+iQyTkh/CkusZSq9eDflu7tjEDXUY6g==}
     engines: {node: '>=v14.0.0', npm: '>=7.0.0'}
 
-  '@wopr-network/plugin-types@0.7.1':
-    resolution: {integrity: sha512-8qUjjo3uC8sIcb/VS0LHAxsg53Q7sI/A3BlvUPMgLLia8VBzocHXsek2pTRMbNcxqNgzsx6Biur4GlQK7mAMJg==}
+  '@wopr-network/plugin-types@0.9.0':
+    resolution: {integrity: sha512-IZuOS2yDedofI8sSpspSE/Bl/7e2Z6MrDUlE6KdxCVGW7lS8lsoFBKuA/epcC3v9qqcIaghWc0IE0g4INRJCLw==}
     peerDependencies:
       zod: ^4.3.6
 
@@ -1674,7 +1674,7 @@ snapshots:
 
   '@vladfrangu/async_event_emitter@2.4.7': {}
 
-  '@wopr-network/plugin-types@0.7.1(zod@3.25.76)':
+  '@wopr-network/plugin-types@0.9.0(zod@3.25.76)':
     dependencies:
       zod: 3.25.76
 

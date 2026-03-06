@@ -8,6 +8,8 @@
 // Re-export shared types used by this plugin
 export type {
 	AgentIdentity,
+	ChannelNotificationCallbacks,
+	ChannelNotificationPayload,
 	ChannelRef,
 	ConfigField,
 	ConfigSchema,
