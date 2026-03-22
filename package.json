@@ -21,6 +21,7 @@
     "vitest": "^4.0.18"
   },
   "keywords": [
+    "wopr-plugin",
     "wopr",
     "plugin",
     "discord",

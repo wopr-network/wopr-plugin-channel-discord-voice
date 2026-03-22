@@ -1063,7 +1063,9 @@ const plugin: WOPRPlugin & {
 		_payload: ChannelNotificationPayload,
 		_callbacks?: ChannelNotificationCallbacks,
 	): Promise<void> {
-		logger.debug({ msg: "sendNotification called but not yet implemented for Discord Voice" });
+		logger.debug({
+			msg: "sendNotification called but not yet implemented for Discord Voice",
+		});
 	},
 
 	async shutdown() {
