@@ -1,3 +1,11 @@
+# ⚠️ This package has moved
+
+This package is now maintained in the [wopr-plugins monorepo](https://github.com/wopr-network/wopr-plugins/tree/main/packages/plugin-channel-discord-voice).
+
+This repository is archived and no longer accepts contributions.
+
+---
+
 # WOPR Discord Voice Channel Plugin
 
 Discord voice channel integration for WOPR - Enables AI voice conversations in Discord voice channels.
